@@ -1,3 +1,14 @@
+#image files
+*.ppm
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+#temp files
+*~
+
+#Common Lisp files
 *.FASL
 *.fasl
 *.lisp-temp
