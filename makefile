@@ -1,4 +1,4 @@
-all: picmaker.lisp
+all:
 	sbcl --script picmaker.lisp
 
 clean:
