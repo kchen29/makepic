@@ -24,22 +24,23 @@
 ;;pixels-side is side length of pixels
 ;;for each diagonal line of pixels, populate randomly with cube intersection
 ;;diag is diagonal constant for x + y = d
-(defun intersect-populate-line (pixels pixels-side inter diag)
+(defun intersect-populate-line (pixels pixels-side inter inter-size diag)
   (dotimes (x pixels-side)
     (let ((y (- diag x)))
       (if (and (>= y 0) (< y pixels-side))
-          (setf (aref pixels x y) (nth (random (list-length inter)) inter))))))
+          (setf (aref pixels x y) (nth (random inter-size) inter))))))
 
 (defun make-pixels (a-size c-size)
   (let ((pixels (make-array (list a-size a-size))))
     ;;# of cube cross-sections
     (dotimes (c-i (- (* 3 c-size) 2))
       ;;cut cube diagonally (cross-section w/ plane)
-      (let ((inter (cube-plane-intersect c-size c-i)))
+      (let* ((inter (cube-plane-intersect c-size c-i))
+            (inter-size (list-length inter)))
         ;;map certain values of intersection to line in plane
         ;;(random for now)
         ;;for every cube-intersect, map to 1  plane-intersects
-        (intersect-populate-line pixels a-size inter c-i)))
+        (intersect-populate-line pixels a-size inter inter-size c-i)))
     pixels))
 
 ;;macros are not hygienic
