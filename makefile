@@ -2,6 +2,7 @@ all:
 	sbcl --script picmaker.lisp
 
 clean:
-	rm -f output.ppm
+	rm -f *.ppm
+	rm -f *.png
 	rm -f *~
 	rm -f *.fasl

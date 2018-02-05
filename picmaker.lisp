@@ -1,27 +1,5 @@
-;;assume P3
-;;size - (width height)
-;;pixels - a list of pixels for now
-;;each pixel is a list '(R G B)
-(defun write-ppm (filename size pixels)
-  (with-open-file (stream filename :direction :output :if-exists :supersede)
-    (format stream
-            "P3 ~a ~a 255 ~{~%~{~a ~a ~a ~}~}"
-            (first size) (second size) pixels)))
-
-;;generate the pixels
-(defun make-pixels ()
-  (let ((pixels '()))
-    (dotimes (b 4)
-      (dotimes (g 256)
-        (dotimes (r 256)
-          (push (list r g (* b 64)) pixels))))
-    (reverse pixels)))
-
-;;(write-ppm "output.ppm" '(512 512) (make-pixels))
-
-
 ;;pixels - 2D array of pixels
-(defun write-ppm2 (filename size pixels)
+(defun write-ppm (filename size pixels)
   (with-open-file (stream filename :direction :output :if-exists :supersede)
     (format stream
             "P3 ~a ~a 255 ~{~%~{~{~a ~a ~a ~}~}~}"
@@ -69,16 +47,15 @@
          (yz (random-double side (- sum x))))
     (list x (first yz) (second yz))))
 
-(defun make-pixels2 (a-size c-size multiplicity)
+(defun make-pixels (a-size c-size)
   (let ((pixels (make-array (list a-size a-size))))
     ;;# of cube cross-sections
     (dotimes (c-i (- (* 3 c-size) 2))
       ;;cut cube diagonally (cross-section w/ plane)
       ;;map certain values of intersection to line in plane
       ;;(random for now)
-      ;;for every cube-intersect, map to multiplicity plane-intersects
-      (dotimes (i multiplicity)
-        (intersect-populate-line pixels a-size c-size c-i (+ i (* multiplicity c-i)))))
+      ;;for every cube-intersect, map to 1  plane-intersects
+      (intersect-populate-line pixels a-size c-size c-i c-i))
     pixels))
 
 ;;macros are not hygienic
@@ -106,43 +83,45 @@
        ,@body)
      ,new-pixels))
 
-(defun red-only (pixels pixels-size)
-  (new-pixels-iterate-pixels x y r g b new-pixels pixels pixels-size
-    (if (and (> r g) (> r b))
-        (setf (aref new-pixels x y) pixel)
-        (setf (aref new-pixels x y) '(0 0 0)))))
+;;iterate over pixels, create a new array where the pixels are kept only if they satisfy test
+(defmacro pixels-keep-test-only (var1 var2 var3 pixels pixels-size &body test)
+  `(new-pixels-iterate-pixels x y ,var1 ,var2 ,var3 new-pixels ,pixels ,pixels-size
+     (if ,@test
+         (setf (aref new-pixels x y) pixel)
+         (setf (aref new-pixels x y) '(0 0 0)))))
 
+;;color-only: keep that color only if it is greater or equal than the others
+(defun red-only (pixels pixels-size)
+  (pixels-keep-test-only r g b pixels pixels-size
+    (and (>= r g) (>= r b))))
+              
 (defun green-only (pixels pixels-size)
-  (new-pixels-iterate-pixels x y r g b new-pixels pixels pixels-size
-    (if (and (> g r) (> g b))
-        (setf (aref new-pixels x y) pixel)
-        (setf (aref new-pixels x y) '(0 0 0)))))
+  (pixels-keep-test-only r g b pixels pixels-size
+    (and (>= g r) (>= g b))))
 
 (defun blue-only (pixels pixels-size)
-  (new-pixels-iterate-pixels x y r g b new-pixels pixels pixels-size
-    (if (and (> b r) (> b g))
-        (setf (aref new-pixels x y) pixel)
-        (setf (aref new-pixels x y) '(0 0 0)))))
+  (pixels-keep-test-only r g b pixels pixels-size
+    (and (>= b r) (>= b g))))
 
-(setf *random-state* (make-random-state t))
-(let ((pixels (make-pixels2 766 256 2)))
-  (write-ppm2 "output.ppm" '(766 766) pixels)
-  (write-ppm2 "output-red.ppm" '(766 766) (red-only pixels 766))
-  (write-ppm2 "output-green.ppm" '(766 766) (green-only pixels 766))
-  (write-ppm2 "output-blue.ppm" '(766 766) (blue-only pixels 766)))
+;;copies source into dest starting at start in dest. Does not check bounds
+(defun copy-array (dest start source source-size)
+  (let ((start-x (first start))
+        (start-y (second start)))
+    (iterate-2d-array i j pixel source source-size
+      (setf (aref dest (+ start-x i) (+ start-y j)) pixel))))
+  
+(defun main (a-size c-size)
+  (setf *random-state* (make-random-state t))
+  (let* ((pixels (make-pixels a-size c-size))
+         (pixels-r (red-only pixels a-size))
+         (pixels-g (green-only pixels a-size))
+         (pixels-b (blue-only pixels a-size))
+         (output-dimensions (list (* 2 a-size) (* 2 a-size)))
+         (output (make-array output-dimensions)))
+    (copy-array output '(0 0) pixels a-size)
+    (copy-array output (list a-size 0) pixels-r a-size)
+    (copy-array output (list 0 a-size) pixels-g a-size)
+    (copy-array output (list a-size a-size) pixels-b a-size)
+    (write-ppm "output.ppm" output-dimensions output)))
 
-;;keep the pixels w/ more red than green and blue
-;;black otherwise
-;; (defun red-only (pixels pixels-size)
-;;   (let ((new-pixels (make-array (list pixels-size pixels-size))))
-;;     (dotimes (x pixels-size)
-;;       (dotimes (y pixels-size)
-;;         (let* ((pixel (aref pixels x y))
-;;                (r (first pixel))
-;;                (g (second pixel))
-;;                (b (third pixel)))
-;;           (if (and (> r g) (> r b))
-;;               (setf (aref new-pixels x y) pixel)
-;;               (setf (aref new-pixels x y) '(0 0 0))))))
-;;     new-pixels))
-
+(main 382 256)
