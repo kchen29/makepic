@@ -11,7 +11,6 @@
                       collect (aref array i j))))
 
 ;; cube's side length, and assume plane is of form x + y + z = c
-;; can be optimized
 (defun cube-plane-intersect (side constant)
   (let (inter)
     (dotimes (r side)
@@ -30,6 +29,7 @@
       (if (and (>= y 0) (< y pixels-side))
           (setf (aref pixels x y) (nth (random inter-size) inter))))))
 
+;;make base pixel array
 (defun make-pixels (a-size c-size)
   (let ((pixels (make-array (list a-size a-size))))
     ;;# of cube cross-sections
@@ -39,11 +39,11 @@
             (inter-size (list-length inter)))
         ;;map certain values of intersection to line in plane
         ;;(random for now)
-        ;;for every cube-intersect, map to 1  plane-intersects
+        ;;for every cube-intersect, map to 1 plane-intersect
         (intersect-populate-line pixels a-size inter inter-size c-i)))
     pixels))
 
-;;macros are not hygienic
+;;;;macros are not hygienic
 ;;iterate over a square 2d array
 ;;supplies x y and the element
 (defmacro iterate-2d-array (var1 var2 el arr arr-size &body body)
@@ -94,8 +94,8 @@
         (start-y (second start)))
     (iterate-2d-array i j pixel source source-size
       (setf (aref dest (+ start-x i) (+ start-y j)) pixel))))
-  
-(defun main (a-size c-size)
+
+(defun create-image (a-size c-size)
   (setf *random-state* (make-random-state t))
   (let* ((pixels (make-pixels a-size c-size))
          (pixels-r (red-only pixels a-size))
@@ -109,5 +109,5 @@
     (copy-array output (list a-size a-size) pixels-b a-size)
     (write-ppm "output.ppm" output-dimensions output)))
 
-;;(main 190 128)
-(main 382 256)
+;;(create-image 191 128)
+(create-image 383 256)
