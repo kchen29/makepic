@@ -10,52 +10,36 @@
         collect (loop for j below (array-dimension array 1)
                       collect (aref array i j))))
 
-;;cube's side length, and assume plane is of form x + y + z = c
-;;assume zero-indexed
-;;can be optimized
-;; (defun cube-plane-intersect (side constant)
-;;   (let (inter)
-;;     (dotimes (r side)
-;;       (dotimes (g side)
-;;         (let ((b (- constant r g)))
-;;           (if (and (>= b 0) (< b side))
-;;               (push (list r g b) inter)))))
-;;     inter))
+;; cube's side length, and assume plane is of form x + y + z = c
+;; can be optimized
+(defun cube-plane-intersect (side constant)
+  (let (inter)
+    (dotimes (r side)
+      (dotimes (g side)
+        (let ((b (- constant r g)))
+          (if (and (>= b 0) (< b side))
+              (push (list r g b) inter)))))
+    inter))
 
 ;;pixels-side is side length of pixels
 ;;for each diagonal line of pixels, populate randomly with cube intersection
 ;;diag is diagonal constant for x + y = d
-(defun intersect-populate-line (pixels pixels-side c-size c-i diag)
+(defun intersect-populate-line (pixels pixels-side inter diag)
   (dotimes (x pixels-side)
     (let ((y (- diag x)))
       (if (and (>= y 0) (< y pixels-side))
-          (setf (aref pixels x y) (random-triple c-size c-i))))))
-
-;;return random double with each coord having a maximum of side - 1, and summing to sum
-(defun random-double (side sum)
-  (let* ((init (max 0 (- sum side -1)))
-         (ran-max (- (min (1+ sum) side) init))
-         (x (+ init (random ran-max)))
-         (y (- sum x)))
-    (list x y)))
-
-;;not actually uniformly random...
-(defun random-triple (side sum)
-  (let* ((init (max 0 (- sum (* 2 (1- side)))))
-         (ran-max (- (min (1+ sum) side) init))
-         (x (+ init (random ran-max)))
-         (yz (random-double side (- sum x))))
-    (list x (first yz) (second yz))))
+          (setf (aref pixels x y) (nth (random (list-length inter)) inter))))))
 
 (defun make-pixels (a-size c-size)
   (let ((pixels (make-array (list a-size a-size))))
     ;;# of cube cross-sections
     (dotimes (c-i (- (* 3 c-size) 2))
       ;;cut cube diagonally (cross-section w/ plane)
-      ;;map certain values of intersection to line in plane
-      ;;(random for now)
-      ;;for every cube-intersect, map to 1  plane-intersects
-      (intersect-populate-line pixels a-size c-size c-i c-i))
+      (let ((inter (cube-plane-intersect c-size c-i)))
+        ;;map certain values of intersection to line in plane
+        ;;(random for now)
+        ;;for every cube-intersect, map to 1  plane-intersects
+        (intersect-populate-line pixels a-size inter c-i)))
     pixels))
 
 ;;macros are not hygienic
@@ -124,4 +108,5 @@
     (copy-array output (list a-size a-size) pixels-b a-size)
     (write-ppm "output.ppm" output-dimensions output)))
 
+;;(main 190 128)
 (main 382 256)
